@@ -196,7 +196,8 @@ To rebuild only one part: add `frontend` or `backend` at the end of the `build` 
 undone, compared, and recovered. If the VM dies, your work is still on GitHub.
 
 Your repository: `https://github.com/Mrutunjay84/netlink-aegis-platform`
-You are currently working on a branch called `policy-engine`.
+Your work lives on the **`main`** branch (your source of truth). The white-label and
+deployment work is already committed and pushed there.
 
 ### 7.1 The 3-command routine (do this after each change that WORKS)
 
@@ -245,10 +246,11 @@ If you're unsure whether something is a secret, ask before pushing.
 ### 7.5 Branches (the short version)
 
 A **branch** is a separate workspace so experiments don't disturb the main version.
-- You're on `policy-engine` now. It's fine to keep working here.
-- When a set of changes is solid, your developer can **merge** it into the main branch
-  (usually called `main`) via a "Pull Request" on GitHub. If you're unsure, leave merging
-  to your developer - committing + pushing (7.1) is the part you need.
+- For everyday changes (logo, favicon, name tweaks), you work directly on `main` and use
+  the 3-command routine (7.1). That's all you need.
+- For a big new feature (e.g. the future AI policy builder), your developer will create a
+  separate, clearly-named branch, then **merge** it back into `main` via a "Pull Request"
+  on GitHub once it's solid. Leave that part to your developer.
 
 ### 7.6 Getting future updates from the original makers (intuitem) - advanced
 
