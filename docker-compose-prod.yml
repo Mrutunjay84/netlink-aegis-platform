@@ -1,19 +1,44 @@
 services:
+  postgres:
+    container_name: postgres
+    image: postgres:16
+    pull_policy: always
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_NAME}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./db/pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_NAME}"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 150s
+
   backend:
     container_name: backend
     image: ghcr.io/intuitem/ciso-assistant-community/backend:latest
     pull_policy: always
     restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
-      - ALLOWED_HOSTS=backend,localhost,192.168.186.128
-      - CISO_ASSISTANT_URL=https://192.168.186.128:8443
-      - DJANGO_DEBUG=True
+      - ALLOWED_HOSTS=backend,localhost,${CISO_FQDN}
+      - CISO_ASSISTANT_URL=https://${CISO_FQDN}
+      - DJANGO_DEBUG=False
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
       - AUTH_TOKEN_TTL=7200
       - HOME=/tmp
       - XDG_CACHE_HOME=/tmp/.cache
       - XDG_CONFIG_HOME=/tmp/.config
       - XDG_DATA_HOME=/tmp/.local/share
-      - QDRANT_URL=http://qdrant:6333
+      - POSTGRES_NAME=${POSTGRES_NAME}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_HOST=postgres
     read_only: true
     cap_drop:
       - ALL
@@ -21,16 +46,15 @@ services:
       - no-new-privileges:true
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev
-
     volumes:
       - ./db:/code/db
     user: "1001:1001"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://backend:8000/api/health/ || exit 1"]
       interval: 10s
-      timeout: 10s
-      retries: 30
-      start_period: 150s
+      timeout: 5s
+      retries: 20
+      start_period: 100s
 
   huey:
     container_name: huey
@@ -41,15 +65,19 @@ services:
         condition: service_healthy
     restart: always
     environment:
-      - ALLOWED_HOSTS=backend,localhost,192.168.186.128
-      - CISO_ASSISTANT_URL=https://192.168.186.128:8443
+      - ALLOWED_HOSTS=backend,localhost,${CISO_FQDN}
+      - CISO_ASSISTANT_URL=https://${CISO_FQDN}
       - DJANGO_DEBUG=False
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
       - AUTH_TOKEN_TTL=7200
       - HOME=/tmp
       - XDG_CACHE_HOME=/tmp/.cache
       - XDG_CONFIG_HOME=/tmp/.config
       - XDG_DATA_HOME=/tmp/.local/share
-      - QDRANT_URL=http://qdrant:6333
+      - POSTGRES_NAME=${POSTGRES_NAME}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_HOST=postgres
     read_only: true
     cap_drop:
       - ALL
@@ -57,21 +85,20 @@ services:
       - no-new-privileges:true
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev
-
     volumes:
       - ./db:/code/db
+    user: "1001:1001"
     entrypoint:
       - /bin/sh
       - -c
       - |
         poetry run python manage.py run_huey -w 2 --scheduler-interval 60
-    user: "1001:1001"
 
   frontend:
     container_name: frontend
     environment:
       - PUBLIC_BACKEND_API_URL=http://backend:8000/api
-      - PUBLIC_BACKEND_API_EXPOSED_URL=https://192.168.186.128:8443/api
+      - PUBLIC_BACKEND_API_EXPOSED_URL=https://${CISO_FQDN}/api
       - PROTOCOL_HEADER=x-forwarded-proto
       - HOST_HEADER=x-forwarded-host
       - HOME=/tmp
@@ -87,42 +114,30 @@ services:
       - no-new-privileges:true
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev
-    restart: always
     depends_on:
       backend:
         condition: service_healthy
+    restart: always
     user: "1001:1001"
-
-  qdrant:
-    container_name: qdrant
-    image: qdrant/qdrant:v1.14.0
-    restart: unless-stopped
-    volumes:
-      - qdrant_data:/qdrant/storage
-    ports:
-      - 6333:6333
 
   caddy:
     container_name: caddy
     image: caddy:2.11.2
     environment:
-      - CISO_ASSISTANT_URL=https://192.168.186.128:8443
+      - CISO_ASSISTANT_URL=https://${CISO_FQDN}
     depends_on:
       backend:
         condition: service_healthy
     restart: unless-stopped
     ports:
-      - 8443:8443
+      - 443:443
     volumes:
-      - ./db/caddy:/data/caddy
+      - ./caddy_data:/data
+      - ${CERT_PATH}:/etc/caddy/cert.pem:ro
+      - ${KEY_PATH}:/etc/caddy/key.pem:ro
     command: |
-      sh -c 'echo "{
-      default_sni 192.168.186.128
-      }" > Caddyfile && echo $$CISO_ASSISTANT_URL "{
+      sh -c 'echo "$$CISO_ASSISTANT_URL {
       reverse_proxy /api/* backend:8000
       reverse_proxy /* frontend:3000
-      tls internal
-      }" >> Caddyfile && caddy run'
-
-volumes:
-  qdrant_data:
+      tls /etc/caddy/cert.pem /etc/caddy/key.pem
+      }" > Caddyfile && caddy run'
