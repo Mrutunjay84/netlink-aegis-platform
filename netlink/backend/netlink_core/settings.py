@@ -1,0 +1,73 @@
+"""
+Netlink Aegis settings.
+
+This is the Netlink edition settings module. It overlays the community
+CISO Assistant settings (``ciso_assistant.settings``) instead of duplicating
+them, so that upstream changes to the community settings are inherited
+automatically and merges stay clean.
+
+Launched via ``netlink/backend/manage.sh`` (or ``DJANGO_SETTINGS_MODULE=
+netlink_core.settings``). The active ``ROOT_URLCONF`` remains
+``ciso_assistant.urls``, which consumes the ``ROUTES`` / ``MODULES`` hooks
+populated below.
+"""
+
+# Inherit the entire community configuration. BASE_DIR, database, storage,
+# allauth, REST framework, logging, etc. all come from here unchanged.
+from ciso_assistant.settings import *  # noqa: F401,F403
+from ciso_assistant.settings import (
+    INSTALLED_APPS,
+    SPECTACULAR_SETTINGS,
+    logger,
+)
+
+logger.info("Launching Netlink Aegis")
+
+# ---------------------------------------------------------------------------
+# Extension hooks
+# ---------------------------------------------------------------------------
+# ``ROUTES``, ``MODULES``, ``MODULE_PATHS`` and ``FEATURE_FLAGS`` are imported
+# (as the same dict objects) from the community settings via the star-import
+# above. We mutate them in place so that ``backend/core/urls.py`` registers our
+# viewsets / urlconfs. They are intentionally empty in Phase 0; the AI policy
+# builder (Phase 2) and evidence validator (Phase 3) will populate them.
+#
+# Example for later phases:
+#   ROUTES["netlink-policies"] = {
+#       "viewset": "netlink_core.views.PolicyBuilderViewSet",
+#       "basename": "netlink-policies",
+#   }
+MODULES["netlink_core"] = {
+    "path": "",
+    "module": "netlink_core.urls",
+}
+
+# ---------------------------------------------------------------------------
+# App registration
+# ---------------------------------------------------------------------------
+# Insert netlink_core BEFORE the community apps so its templates/ directory
+# takes priority in the app-directories template loader (used for branded
+# email / PDF template overrides in Phase 1).
+INSTALLED_APPS = ["netlink_core", *INSTALLED_APPS]
+
+# ---------------------------------------------------------------------------
+# Branding (Phase 1) - settings-level overrides
+# ---------------------------------------------------------------------------
+SPECTACULAR_SETTINGS["TITLE"] = "Netlink Aegis API - Experimental"
+SPECTACULAR_SETTINGS["DESCRIPTION"] = (
+    "Netlink Aegis - API Documentation for automating all your GRC needs"
+)
+
+# Default sender address when none is configured via DEFAULT_FROM_EMAIL.
+if not os.environ.get("DEFAULT_FROM_EMAIL"):
+    DEFAULT_FROM_EMAIL = "noreply@netlink-aegis.local"
+
+# Console email backend in mail-debug mode uses a branded noreply sender.
+if MAIL_DEBUG:
+    DEFAULT_FROM_EMAIL = "noreply@netlink-aegis.local"
+
+logger.info(
+    "Netlink Aegis startup information",
+    feature_flags=FEATURE_FLAGS,
+    module_paths=MODULE_PATHS,
+)
