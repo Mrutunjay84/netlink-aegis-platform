@@ -1,6 +1,8 @@
 *.DS_Store
 *~$*
+*.swp
 .env
+.env.prod
 .venv
 venv
 cli/.mcp.env
