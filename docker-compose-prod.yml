@@ -19,8 +19,11 @@ services:
 
   backend:
     container_name: backend
-    image: ghcr.io/intuitem/ciso-assistant-community/backend:latest
-    pull_policy: always
+    build:
+      context: .
+      dockerfile: ./netlink/backend/Dockerfile
+    image: netlink-aegis-backend:latest
+    pull_policy: build
     restart: always
     depends_on:
       postgres:
@@ -58,8 +61,11 @@ services:
 
   huey:
     container_name: huey
-    image: ghcr.io/intuitem/ciso-assistant-community/backend:latest
-    pull_policy: always
+    build:
+      context: .
+      dockerfile: ./netlink/backend/Dockerfile
+    image: netlink-aegis-backend:latest
+    pull_policy: build
     depends_on:
       backend:
         condition: service_healthy
@@ -105,8 +111,13 @@ services:
       - XDG_CACHE_HOME=/tmp/.cache
       - XDG_CONFIG_HOME=/tmp/.config
       - XDG_DATA_HOME=/tmp/.local/share
-    image: ghcr.io/intuitem/ciso-assistant-community/frontend:latest
-    pull_policy: always
+    build:
+      context: .
+      dockerfile: ./netlink/frontend/Dockerfile
+      args:
+        NODE_BUILD_HEAP_MB: ${NODE_BUILD_HEAP_MB:-8192}
+    image: netlink-aegis-frontend:latest
+    pull_policy: build
     read_only: true
     cap_drop:
       - ALL
