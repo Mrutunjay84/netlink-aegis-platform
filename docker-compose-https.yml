@@ -1,0 +1,149 @@
+# Netlink Aegis - SELF-SIGNED HTTPS deployment (NO purchased certificates).
+#
+# "No-cert" mode that is still ENCRYPTED: builds the Netlink-branded images,
+# uses a local SQLite database (the ./db folder), and serves the app over HTTPS
+# on port 443 with a Caddy-generated internal (self-signed) certificate.
+#
+# Works with an IP address OR a domain name. The only downside vs real certs is
+# a one-time browser "your connection is not private -> proceed" warning.
+# Auth cookies stay Secure (default), so no HTTP cookie workaround is needed.
+#
+# Usage:
+#   cp .env.https.example .env.https    # then set CISO_FQDN to this host's IP/name
+#   docker compose --env-file .env.https -f docker-compose-https.yml up -d --build
+services:
+  backend:
+    container_name: backend
+    build:
+      context: .
+      dockerfile: ./netlink/backend/Dockerfile
+    image: netlink-aegis-backend:latest
+    pull_policy: build
+    restart: always
+    environment:
+      - ALLOWED_HOSTS=backend,localhost,${CISO_FQDN}
+      - CISO_ASSISTANT_URL=https://${CISO_FQDN}
+      - DJANGO_DEBUG=False
+      - AUTH_TOKEN_TTL=7200
+      - HOME=/tmp
+      - XDG_CACHE_HOME=/tmp/.cache
+      - XDG_CONFIG_HOME=/tmp/.config
+      - XDG_DATA_HOME=/tmp/.local/share
+      - QDRANT_URL=http://qdrant:6333
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev
+    volumes:
+      - ./db:/code/db
+    user: "1001:1001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://backend:8000/api/health/ || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 150s
+
+  huey:
+    container_name: huey
+    build:
+      context: .
+      dockerfile: ./netlink/backend/Dockerfile
+    image: netlink-aegis-backend:latest
+    pull_policy: build
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: always
+    environment:
+      - ALLOWED_HOSTS=backend,localhost,${CISO_FQDN}
+      - CISO_ASSISTANT_URL=https://${CISO_FQDN}
+      - DJANGO_DEBUG=False
+      - AUTH_TOKEN_TTL=7200
+      - HOME=/tmp
+      - XDG_CACHE_HOME=/tmp/.cache
+      - XDG_CONFIG_HOME=/tmp/.config
+      - XDG_DATA_HOME=/tmp/.local/share
+      - QDRANT_URL=http://qdrant:6333
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev
+    volumes:
+      - ./db:/code/db
+    user: "1001:1001"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        poetry run python manage.py run_huey -w 2 --scheduler-interval 60
+
+  frontend:
+    container_name: frontend
+    build:
+      context: .
+      dockerfile: ./netlink/frontend/Dockerfile
+      args:
+        NODE_BUILD_HEAP_MB: ${NODE_BUILD_HEAP_MB:-8192}
+    image: netlink-aegis-frontend:latest
+    pull_policy: build
+    environment:
+      - PUBLIC_BACKEND_API_URL=http://backend:8000/api
+      - PUBLIC_BACKEND_API_EXPOSED_URL=https://${CISO_FQDN}/api
+      - PROTOCOL_HEADER=x-forwarded-proto
+      - HOST_HEADER=x-forwarded-host
+      - HOME=/tmp
+      - XDG_CACHE_HOME=/tmp/.cache
+      - XDG_CONFIG_HOME=/tmp/.config
+      - XDG_DATA_HOME=/tmp/.local/share
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev
+    restart: always
+    depends_on:
+      backend:
+        condition: service_healthy
+    user: "1001:1001"
+
+  qdrant:
+    container_name: qdrant
+    image: qdrant/qdrant:v1.14.0
+    restart: unless-stopped
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  caddy:
+    container_name: caddy
+    image: caddy:2.11.2
+    environment:
+      - CISO_ASSISTANT_URL=https://${CISO_FQDN}
+      - APP_HOST=${CISO_FQDN}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - 443:443
+    volumes:
+      - ./db/caddy:/data/caddy
+    command: |
+      sh -c 'echo "{
+      default_sni $$APP_HOST
+      }" > Caddyfile && echo $$CISO_ASSISTANT_URL "{
+      reverse_proxy /api/* backend:8000
+      reverse_proxy /* frontend:3000
+      tls internal
+      }" >> Caddyfile && caddy run'
+
+volumes:
+  qdrant_data:

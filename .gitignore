@@ -3,6 +3,8 @@
 *.swp
 .env
 .env.prod
+.env.http
+.env.https
 .venv
 venv
 cli/.mcp.env
