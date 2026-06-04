@@ -19,6 +19,10 @@ COPY netlink/frontend .
 # committed community source, so it survives upstream merges.
 RUN node brand-patch.mjs
 
+# Make the auth cookies' Secure flag runtime-controllable (SECURE_COOKIES env)
+# so the same image works for both HTTPS (default) and plain-HTTP deployments.
+RUN node deploy-patch.mjs
+
 RUN npm install -g pnpm
 RUN pnpm install --frozen-lockfile
 RUN pnpm run build
