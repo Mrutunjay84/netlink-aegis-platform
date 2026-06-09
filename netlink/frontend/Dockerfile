@@ -23,6 +23,10 @@ RUN node brand-patch.mjs
 # so the same image works for both HTTPS (default) and plain-HTTP deployments.
 RUN node deploy-patch.mjs
 
+# Wire Netlink overlay features that need a small edit to a community file
+# (sidebar nav entry + i18n keys for the Policy Builder). Runs against the copy.
+RUN node feature-patch.mjs
+
 RUN npm install -g pnpm
 RUN pnpm install --frozen-lockfile
 RUN pnpm run build

@@ -27,6 +27,7 @@ pre-build: ensure-pnpm
 	@rsync -av --exclude=$(COMMUNITY_DIR)/build/ --exclude=node_modules/  $(COMMUNITY_DIR) $(BUILD_DIR)
 	@rsync -avI --exclude=Makefile --exclude=Dockerfile --exclude=README.md $(NETLINK_DIR) $(BUILD_DIR)
 	@node $(FRONTEND_DIR)/brand-patch.mjs $(FRONTEND_DIR)
+	@node $(FRONTEND_DIR)/feature-patch.mjs $(FRONTEND_DIR)
 	@$(PM) install --frozen-lockfile -C $(FRONTEND_DIR)
 
 build-netlink: pre-build

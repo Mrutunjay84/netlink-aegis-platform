@@ -25,6 +25,11 @@ services:
       - CISO_ASSISTANT_URL=https://${CISO_FQDN}
       - DJANGO_DEBUG=False
       - AUTH_TOKEN_TTL=7200
+      # Optional first-boot admin. Set both in your .env file to auto-create the
+      # superuser on first start; leave empty to skip (create it later with
+      # `docker compose ... exec backend poetry run python manage.py createsuperuser`).
+      - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL:-}
+      - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-}
       - HOME=/tmp
       - XDG_CACHE_HOME=/tmp/.cache
       - XDG_CONFIG_HOME=/tmp/.config
@@ -63,6 +68,11 @@ services:
       - CISO_ASSISTANT_URL=https://${CISO_FQDN}
       - DJANGO_DEBUG=False
       - AUTH_TOKEN_TTL=7200
+      # Optional first-boot admin. Set both in your .env file to auto-create the
+      # superuser on first start; leave empty to skip (create it later with
+      # `docker compose ... exec backend poetry run python manage.py createsuperuser`).
+      - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL:-}
+      - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-}
       - HOME=/tmp
       - XDG_CACHE_HOME=/tmp/.cache
       - XDG_CONFIG_HOME=/tmp/.config

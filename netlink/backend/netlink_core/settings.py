@@ -17,6 +17,8 @@ populated below.
 from ciso_assistant.settings import *  # noqa: F401,F403
 from ciso_assistant.settings import (
     INSTALLED_APPS,
+    MODULES,
+    ROUTES,
     SPECTACULAR_SETTINGS,
     logger,
 )
@@ -32,23 +34,27 @@ logger.info("Launching Netlink Aegis")
 # viewsets / urlconfs. They are intentionally empty in Phase 0; the AI policy
 # builder (Phase 2) and evidence validator (Phase 3) will populate them.
 #
-# Example for later phases:
-#   ROUTES["netlink-policies"] = {
-#       "viewset": "netlink_core.views.PolicyBuilderViewSet",
-#       "basename": "netlink-policies",
-#   }
 MODULES["netlink_core"] = {
     "path": "",
     "module": "netlink_core.urls",
 }
 
+# Phase 2 - AI policy builder. Registers PolicyBuilderViewSet on the community
+# DRF router (see backend/core/urls.py), reachable under
+# /api/netlink-policy-builder/. The viewset lives in the overlay app
+# netlink_policies (copied into the image by netlink/backend/Dockerfile).
+ROUTES["netlink-policy-builder"] = {
+    "viewset": "netlink_policies.views.PolicyBuilderViewSet",
+    "basename": "netlink-policy-builder",
+}
+
 # ---------------------------------------------------------------------------
 # App registration
 # ---------------------------------------------------------------------------
-# Insert netlink_core BEFORE the community apps so its templates/ directory
-# takes priority in the app-directories template loader (used for branded
-# email / PDF template overrides in Phase 1).
-INSTALLED_APPS = ["netlink_core", *INSTALLED_APPS]
+# Insert the Netlink overlay apps BEFORE the community apps so netlink_core's
+# templates/ directory takes priority in the app-directories template loader
+# (used for branded email / PDF template overrides in Phase 1).
+INSTALLED_APPS = ["netlink_core", "netlink_policies", *INSTALLED_APPS]
 
 # ---------------------------------------------------------------------------
 # Branding (Phase 1) - settings-level overrides
