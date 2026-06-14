@@ -10,6 +10,33 @@ the application and the Caddy web server differently. You can deploy anywhere (a
 
 ---
 
+## 0. Quickstart (one command)
+
+On a fresh server with Docker installed, clone the repo and run the bootstrap script.
+It auto-detects the host IP, tunes the frontend build memory for small machines, writes
+the env file, and brings the stack up:
+
+```bash
+git clone https://github.com/Mrutunjay84/netlink-aegis-platform
+cd netlink-aegis-platform
+
+./deploy.sh                      # Plain HTTP on this host's auto-detected IP
+./deploy.sh 192.168.1.50         # Plain HTTP on a specific IP/hostname
+./deploy.sh grc.example.com --https   # Self-signed HTTPS
+```
+
+Then create your first admin account (printed at the end of the script):
+
+```bash
+docker compose --env-file .env.http -f docker-compose-http.yml exec backend \
+  poetry run python manage.py createsuperuser
+```
+
+Prefer to do it by hand, or need a real-certificate production setup? Use the manual
+modes below.
+
+---
+
 ## 1. Which mode should I use?
 
 | Mode | File | Encryption | Certificates needed | Database | Use when |
