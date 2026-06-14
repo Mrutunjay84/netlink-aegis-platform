@@ -25,7 +25,11 @@ import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from '
 import { join, resolve } from 'node:path';
 
 const ROOT = resolve(process.argv[2] ?? process.cwd());
-const ROUTES_DIR = join(ROOT, 'src', 'routes');
+// Scan the whole src tree (not just routes): the csrftoken/LOCALE cookies are
+// set in src/hooks.server.ts, which lives outside src/routes. Missing it means
+// the csrftoken cookie stays Secure and is dropped over plain HTTP, so login
+// silently fails.
+const ROUTES_DIR = join(ROOT, 'src');
 
 const FROM = /secure:\s*true/g;
 const TO = "secure: process.env.SECURE_COOKIES !== 'false'";
