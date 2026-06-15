@@ -27,7 +27,10 @@ pre-build: ensure-pnpm
 	@rsync -av --exclude=$(COMMUNITY_DIR)/build/ --exclude=node_modules/  $(COMMUNITY_DIR) $(BUILD_DIR)
 	@rsync -avI --exclude=Makefile --exclude=Dockerfile --exclude=README.md $(NETLINK_DIR) $(BUILD_DIR)
 	@node $(FRONTEND_DIR)/brand-patch.mjs $(FRONTEND_DIR)
+	@node $(FRONTEND_DIR)/feature-patch.mjs $(FRONTEND_DIR)
 	@$(PM) install --frozen-lockfile -C $(FRONTEND_DIR)
+	@$(PM) add -C $(FRONTEND_DIR) @tiptap/core@2 @tiptap/pm@2 @tiptap/starter-kit@2 @tiptap/extension-underline@2 @tiptap/extension-text-style@2 @tiptap/extension-color@2 @tiptap/extension-highlight@2 @tiptap/extension-text-align@2 @tiptap/extension-font-family@2 @tiptap/extension-image@2 @tiptap/extension-link@2 @tiptap/extension-table@2 @tiptap/extension-table-row@2 @tiptap/extension-table-header@2 @tiptap/extension-table-cell@2
+	@$(PM) add -C $(FRONTEND_DIR) @fontsource-variable/inter
 
 build-netlink: pre-build
 	@$(PM) run -C $(FRONTEND_DIR) build

@@ -131,8 +131,36 @@ function patchLiterals() {
 	console.log(`[brand-patch] applied literal replacements in ${changed} file(s)`);
 }
 
+// Inject the Netlink minimalistic theme overlay into app.css so it loads after
+// the community ciso-theme (our token overrides then win). Idempotent.
+function patchTheme() {
+	const path = join(ROOT, 'src/app.css');
+	if (!existsSync(path)) {
+		console.warn('[brand-patch] src/app.css not found; skipping theme inject');
+		return;
+	}
+	const text = readFileSync(path, 'utf8');
+	const importLine = "@import './netlink-theme.css';";
+	if (text.includes(importLine)) {
+		console.log('[brand-patch] theme already injected');
+		return;
+	}
+	// Place right after the skeleton-svelte import (last of the @import block).
+	const anchor = "@import '@skeletonlabs/skeleton-svelte';";
+	let patched;
+	if (text.includes(anchor)) {
+		patched = text.replace(anchor, `${anchor}\n${importLine}`);
+	} else {
+		// Fallback: prepend (still before non-import rules in our overlay file).
+		patched = `${importLine}\n${text}`;
+	}
+	writeFileSync(path, patched);
+	console.log('[brand-patch] injected netlink-theme.css import into app.css');
+}
+
 console.log(`[brand-patch] root: ${ROOT}`);
 patchMessages();
 patchSourceFiles();
 patchLiterals();
+patchTheme();
 console.log('[brand-patch] done');

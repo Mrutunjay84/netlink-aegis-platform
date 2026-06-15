@@ -21,7 +21,7 @@ services:
     pull_policy: build
     restart: always
     environment:
-      - ALLOWED_HOSTS=backend,localhost,${CISO_FQDN}
+      - ALLOWED_HOSTS=backend,localhost,127.0.0.1,ciso.dialex.in,${CISO_FQDN}
       - CISO_ASSISTANT_URL=http://${CISO_FQDN}
       - DJANGO_DEBUG=False
       - AUTH_TOKEN_TTL=7200
@@ -59,7 +59,7 @@ services:
         condition: service_healthy
     restart: always
     environment:
-      - ALLOWED_HOSTS=backend,localhost,${CISO_FQDN}
+      - ALLOWED_HOSTS=backend,localhost,127.0.0.1,ciso.dialex.in,${CISO_FQDN}
       - CISO_ASSISTANT_URL=http://${CISO_FQDN}
       - DJANGO_DEBUG=False
       - AUTH_TOKEN_TTL=7200

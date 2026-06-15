@@ -17,6 +17,8 @@ populated below.
 from ciso_assistant.settings import *  # noqa: F401,F403
 from ciso_assistant.settings import (
     INSTALLED_APPS,
+    MODULES,
+    ROUTES,
     SPECTACULAR_SETTINGS,
     logger,
 )
@@ -29,26 +31,36 @@ logger.info("Launching Netlink Aegis")
 # ``ROUTES``, ``MODULES``, ``MODULE_PATHS`` and ``FEATURE_FLAGS`` are imported
 # (as the same dict objects) from the community settings via the star-import
 # above. We mutate them in place so that ``backend/core/urls.py`` registers our
-# viewsets / urlconfs. They are intentionally empty in Phase 0; the AI policy
-# builder (Phase 2) and evidence validator (Phase 3) will populate them.
-#
-# Example for later phases:
-#   ROUTES["netlink-policies"] = {
-#       "viewset": "netlink_core.views.PolicyBuilderViewSet",
-#       "basename": "netlink-policies",
-#   }
+# viewsets / urlconfs.
 MODULES["netlink_core"] = {
     "path": "",
     "module": "netlink_core.urls",
 }
 
+# AI Policy Builder. Registers PolicyBuilderViewSet on the community DRF router
+# (see backend/core/urls.py), reachable under /api/netlink-policy-builder/. The
+# viewset lives in the overlay app netlink_policies (copied into the image by
+# netlink/backend/Dockerfile).
+ROUTES["netlink-policy-builder"] = {
+    "viewset": "netlink_policies.views.PolicyBuilderViewSet",
+    "basename": "netlink-policy-builder",
+}
+
+# Audit Evidence Assistant. Registers AuditEvidenceViewSet on the community DRF
+# router, reachable under /api/netlink-audit-evidence/. Shares the same overlay
+# app (netlink_policies) and provider config as the Policy Builder.
+ROUTES["netlink-audit-evidence"] = {
+    "viewset": "netlink_policies.audit_views.AuditEvidenceViewSet",
+    "basename": "netlink-audit-evidence",
+}
+
 # ---------------------------------------------------------------------------
 # App registration
 # ---------------------------------------------------------------------------
-# Insert netlink_core BEFORE the community apps so its templates/ directory
-# takes priority in the app-directories template loader (used for branded
-# email / PDF template overrides in Phase 1).
-INSTALLED_APPS = ["netlink_core", *INSTALLED_APPS]
+# Insert the Netlink overlay apps BEFORE the community apps so netlink_core's
+# templates/ directory takes priority in the app-directories template loader
+# (used for branded email / PDF template overrides in Phase 1).
+INSTALLED_APPS = ["netlink_core", "netlink_policies", *INSTALLED_APPS]
 
 # ---------------------------------------------------------------------------
 # Branding (Phase 1) - settings-level overrides
@@ -57,6 +69,10 @@ SPECTACULAR_SETTINGS["TITLE"] = "Netlink Aegis API - Experimental"
 SPECTACULAR_SETTINGS["DESCRIPTION"] = (
     "Netlink Aegis - API Documentation for automating all your GRC needs"
 )
+
+# Allow larger JSON request bodies: the Policy Builder document template lets an
+# admin upload a .docx letterhead, sent base64-encoded in a JSON PUT.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024  # 15 MB
 
 # Default sender address when none is configured via DEFAULT_FROM_EMAIL.
 if not os.environ.get("DEFAULT_FROM_EMAIL"):

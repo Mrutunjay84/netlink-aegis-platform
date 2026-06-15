@@ -1,0 +1,77 @@
+/*
+ * Netlink Aegis - minimalistic compliance UI theme overlay.
+ *
+ * Loaded AFTER ciso-theme.css (see brand-patch.mjs, which injects the import
+ * into app.css), so these declarations win. We deliberately theme through the
+ * Skeleton design tokens (CSS custom properties) rather than overriding
+ * component classes -- every Skeleton component (.card/.btn/.input/...) reads
+ * these variables, so this restyles the whole app consistently and safely,
+ * and stays upstream-merge proof.
+ *
+ * Self-hosted Inter (variable) gives the clean, modern, "compliance tool" feel
+ * without any external network request at runtime.
+ */
+@import '@fontsource-variable/inter';
+
+:root,
+[data-theme='cisotheme'] {
+	/* Typography ---------------------------------------------------------- */
+	--base-font-family:
+		'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system,
+		'Segoe UI', Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
+	--heading-font-family: var(--base-font-family);
+	--anchor-font-family: var(--base-font-family);
+	--base-font-weight: 400;
+	--heading-font-weight: 650;
+	--base-letter-spacing: -0.006em;
+	--heading-letter-spacing: -0.018em;
+	--text-scaling: 1.05;
+
+	/* Shape: slightly softer, more modern radii (applied app-wide via tokens) */
+	--radius-base: 0.55rem;
+	--radius-container: 0.85rem;
+}
+
+/* Crisp text rendering everywhere ---------------------------------------- */
+html {
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	text-rendering: optimizeLegibility;
+	font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
+}
+
+body {
+	font-family: var(--base-font-family);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	letter-spacing: var(--heading-letter-spacing);
+}
+
+/* A calmer, thinner scrollbar that matches the brand (overrides app.html). */
+.scrollbar {
+	scrollbar-color: color-mix(in oklab, var(--color-primary-500) 55%, transparent) transparent;
+	scrollbar-width: thin;
+}
+.scrollbar::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+.scrollbar::-webkit-scrollbar-track {
+	background: transparent;
+}
+.scrollbar::-webkit-scrollbar-thumb {
+	background: color-mix(in oklab, var(--color-primary-500) 45%, transparent);
+	border-radius: 100vh;
+	border: 2px solid transparent;
+	background-clip: padding-box;
+}
+.scrollbar::-webkit-scrollbar-thumb:hover {
+	background: color-mix(in oklab, var(--color-primary-500) 70%, transparent);
+	background-clip: padding-box;
+}

@@ -56,8 +56,15 @@ RUN poetry install --no-root \
      nvidia-nvshmem-cu13 nvidia-nvtx triton 2>/dev/null; \
   rm -rf $POETRY_CACHE_DIR /root/.cache/pip
 
+# Netlink overlay dependency: HTML -> DOCX conversion for the Policy Builder
+# export endpoint. Community deps already provide python-docx (DOCX) and
+# weasyprint (PDF); htmldocx adds the HTML parsing layer (pulls beautifulsoup4,
+# pure-Python, no native build). Installed into the project venv used at runtime.
+RUN .venv/bin/pip install --no-cache-dir htmldocx==0.0.6
+
 COPY backend /code/
 COPY netlink/backend/netlink_core /code/netlink_core
+COPY netlink/backend/netlink_policies /code/netlink_policies
 COPY netlink/backend/brand_patch.py /code/netlink_brand_patch.py
 COPY backend/startup.sh /code/
 
