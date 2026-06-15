@@ -1,21 +1,28 @@
 /*
  * Netlink Aegis - minimalistic compliance UI theme overlay.
  *
- * Loaded AFTER ciso-theme.css (see brand-patch.mjs, which injects the import
- * into app.css), so these declarations win. We deliberately theme through the
- * Skeleton design tokens (CSS custom properties) rather than overriding
- * component classes -- every Skeleton component (.card/.btn/.input/...) reads
- * these variables, so this restyles the whole app consistently and safely,
- * and stays upstream-merge proof.
+ * Loaded AFTER ciso-theme.css (brand-patch.mjs injects the import into app.css),
+ * so every declaration here wins. We theme ENTIRELY through the Skeleton design
+ * tokens (CSS custom properties) instead of overriding component classes, so the
+ * whole app -- sidebar, top bar, buttons, cards, inputs, badges, tables, charts,
+ * our custom pages -- restyles consistently and stays upstream-merge proof.
  *
- * Self-hosted Inter (variable) gives the clean, modern, "compliance tool" feel
- * without any external network request at runtime.
+ * Palette (cohesive, restrained "compliance tool" combination):
+ *   primary   = Indigo   (brand + primary actions)
+ *   secondary = Cyan     (secondary accents)
+ *   tertiary  = Violet   (tertiary accents / variety)
+ *   success   = Emerald  warning = Amber   error = Rose
+ *   surface   = Slate    (kept from upstream; clean cool neutrals)
+ *
+ * Contrast tokens are intentionally NOT redefined: ciso-theme maps each shade's
+ * text color to var(--color-<c>-50/950), which we still set, so on-color text
+ * stays correct automatically.
  */
 @import '@fontsource-variable/inter';
 
 :root,
 [data-theme='cisotheme'] {
-	/* Typography ---------------------------------------------------------- */
+	/* ---- Typography ----------------------------------------------------- */
 	--base-font-family:
 		'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system,
 		'Segoe UI', Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
@@ -27,12 +34,103 @@
 	--heading-letter-spacing: -0.018em;
 	--text-scaling: 1.05;
 
-	/* Shape: slightly softer, more modern radii (applied app-wide via tokens) */
+	/* ---- Shape: softer, modern radii (applied app-wide via tokens) ------ */
 	--radius-base: 0.55rem;
 	--radius-container: 0.85rem;
+
+	/* ---- Primary: Indigo ----------------------------------------------- */
+	--color-primary-50: #eef2ff;
+	--color-primary-100: #e0e7ff;
+	--color-primary-200: #c7d2fe;
+	--color-primary-300: #a5b4fc;
+	--color-primary-400: #818cf8;
+	--color-primary-500: #6366f1;
+	--color-primary-600: #4f46e5;
+	--color-primary-700: #4338ca;
+	--color-primary-800: #3730a3;
+	--color-primary-900: #312e81;
+	--color-primary-950: #1e1b4b;
+
+	/* ---- Secondary: Cyan ----------------------------------------------- */
+	--color-secondary-50: #ecfeff;
+	--color-secondary-100: #cffafe;
+	--color-secondary-200: #a5f3fc;
+	--color-secondary-300: #67e8f9;
+	--color-secondary-400: #22d3ee;
+	--color-secondary-500: #06b6d4;
+	--color-secondary-600: #0891b2;
+	--color-secondary-700: #0e7490;
+	--color-secondary-800: #155e75;
+	--color-secondary-900: #164e63;
+	--color-secondary-950: #083344;
+
+	/* ---- Tertiary: Violet ---------------------------------------------- */
+	--color-tertiary-50: #f5f3ff;
+	--color-tertiary-100: #ede9fe;
+	--color-tertiary-200: #ddd6fe;
+	--color-tertiary-300: #c4b5fd;
+	--color-tertiary-400: #a78bfa;
+	--color-tertiary-500: #8b5cf6;
+	--color-tertiary-600: #7c3aed;
+	--color-tertiary-700: #6d28d9;
+	--color-tertiary-800: #5b21b6;
+	--color-tertiary-900: #4c1d95;
+	--color-tertiary-950: #2e1065;
+
+	/* ---- Success: Emerald ---------------------------------------------- */
+	--color-success-50: #ecfdf5;
+	--color-success-100: #d1fae5;
+	--color-success-200: #a7f3d0;
+	--color-success-300: #6ee7b7;
+	--color-success-400: #34d399;
+	--color-success-500: #10b981;
+	--color-success-600: #059669;
+	--color-success-700: #047857;
+	--color-success-800: #065f46;
+	--color-success-900: #064e3b;
+	--color-success-950: #022c22;
+
+	/* ---- Warning: Amber ------------------------------------------------ */
+	--color-warning-50: #fffbeb;
+	--color-warning-100: #fef3c7;
+	--color-warning-200: #fde68a;
+	--color-warning-300: #fcd34d;
+	--color-warning-400: #fbbf24;
+	--color-warning-500: #f59e0b;
+	--color-warning-600: #d97706;
+	--color-warning-700: #b45309;
+	--color-warning-800: #92400e;
+	--color-warning-900: #78350f;
+	--color-warning-950: #451a03;
+
+	/* ---- Error: Rose --------------------------------------------------- */
+	--color-error-50: #fff1f2;
+	--color-error-100: #ffe4e6;
+	--color-error-200: #fecdd3;
+	--color-error-300: #fda4af;
+	--color-error-400: #fb7185;
+	--color-error-500: #f43f5e;
+	--color-error-600: #e11d48;
+	--color-error-700: #be123c;
+	--color-error-800: #9f1239;
+	--color-error-900: #881337;
+	--color-error-950: #4c0519;
+
+	/* ---- Surface: refined Slate (cool, clean neutrals) ----------------- */
+	--color-surface-50: #f8fafc;
+	--color-surface-100: #f1f5f9;
+	--color-surface-200: #e2e8f0;
+	--color-surface-300: #cbd5e1;
+	--color-surface-400: #94a3b8;
+	--color-surface-500: #64748b;
+	--color-surface-600: #475569;
+	--color-surface-700: #334155;
+	--color-surface-800: #1e293b;
+	--color-surface-900: #0f172a;
+	--color-surface-950: #020617;
 }
 
-/* Crisp text rendering everywhere ---------------------------------------- */
+/* Crisp text rendering everywhere --------------------------------------- */
 html {
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
@@ -53,7 +151,7 @@ h6 {
 	letter-spacing: var(--heading-letter-spacing);
 }
 
-/* A calmer, thinner scrollbar that matches the brand (overrides app.html). */
+/* Calm, thin, brand-tinted scrollbar (overrides the one in app.html). */
 .scrollbar {
 	scrollbar-color: color-mix(in oklab, var(--color-primary-500) 55%, transparent) transparent;
 	scrollbar-width: thin;

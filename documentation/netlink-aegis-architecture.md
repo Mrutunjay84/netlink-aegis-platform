@@ -142,9 +142,20 @@ The overlay app has **no migrations**; all config is stored in the existing
   `generation_failed`) so the UI shows an actionable message.
 
 ### 4.4 Minimalistic UI theme  (`netlink-theme.css`)
-- Self-hosted **Inter** font and refined Skeleton design tokens (weight,
-  letter-spacing, radius, scrollbar). Themes the **whole app** through tokens, so
-  no per-component overrides are needed.
+- Self-hosted **Inter** font and a full, cohesive **color palette** plus refined
+  shape tokens — themes the **whole app** (sidebar, top bar, buttons, cards,
+  inputs, badges, tables, charts, our pages) purely through Skeleton design
+  tokens, so there are **no per-component overrides** and it stays merge-safe.
+- Palette (overrides the upstream ramps after `ciso-theme.css`, so it wins):
+  - `primary` = **Indigo**, `secondary` = **Cyan**, `tertiary` = **Violet**
+  - `success` = **Emerald**, `warning` = **Amber**, `error` = **Rose**
+  - `surface` = refined **Slate** (cool, clean neutrals)
+- Typography/shape: Inter variable, heading weight 650, slight negative
+  letter-spacing, antialiasing, softer radii (`--radius-base` 0.55rem /
+  `--radius-container` 0.85rem), and a thin brand-tinted scrollbar.
+- To re-skin: edit the token values in `netlink/frontend/src/netlink-theme.css`
+  and rebuild the frontend. (Contrast/text-on-color tokens auto-follow because
+  ciso-theme maps them to each color's 50/950 shade, which we set.)
 
 ---
 
