@@ -283,3 +283,78 @@ docker logs backend --since 10m 2>&1 | tail -50
 To pull upstream updates: merge the upstream tag into the overlay branch; because
 all Netlink changes are overlay/patches, conflicts are minimal. Rebuild both
 images and redeploy.
+
+---
+
+## 10. Security & dependency hardening
+
+Dependency advisories are tracked with GitHub Dependabot and audited locally with
+`pnpm audit` (frontend) and `pip-audit` (backend). Because we vendor upstream,
+security fixes are applied as **minimal, surgical version pins** rather than wide
+upgrades, so upstream merges stay clean.
+
+### Frontend (npm / pnpm)
+Fixes are expressed in `frontend/package.json` under `pnpm.overrides` (forces
+patched versions everywhere a package appears, including transitive deps) plus a
+few direct `devDependencies` bumps, then `pnpm-lock.yaml` is regenerated with the
+pinned `pnpm@10.33.2`. Patched in this round:
+
+| Package | Was | Now | Severity | Notes |
+|---|---|---|---|---|
+| `@sveltejs/kit` | 2.57.1 | ≥2.60.1 | moderate | `query.batch` cross-talk — **runtime** |
+| `joi` (via superforms) | <17.13.4 | ≥17.13.4 | moderate | recursive-schema DoS — **runtime** |
+| `protocol-buffers-schema` (via unovis/maplibre) | <3.6.1 | ≥3.6.1 | moderate | prototype pollution — **runtime** |
+| `vite` | 6.4.2 | ≥6.4.3 | moderate/high | `server.fs.deny` bypass, launch-editor NTLM |
+| `ws` (via jsdom) | <8.21.0 | ≥8.21.0 | high/moderate | DoS / uninitialized memory |
+| `tar` | <7.5.16 | ≥7.5.16 | moderate | PAX long-name parser confusion |
+| `js-yaml` | ≤4.1.1 | ≥4.2.0 | moderate | merge-key quadratic DoS |
+| `brace-expansion` | <5.0.6 | ≥5.0.6 | moderate | range DoS |
+| `vitest` / `@vitest/*` | 3.2.4 | ≥3.2.6 | critical | Vitest UI arbitrary file read/exec |
+
+Result: `pnpm audit` reports **0 critical / high (runtime) / moderate / low**,
+with one **knowingly-deferred** advisory below.
+
+**Deferred: `esbuild` (high + low, build-time only).** The only patched release
+(`≥0.28.1`) regresses the SvelteKit/Svelte compile — esbuild fails with
+*"Transforming destructuring to the configured target environment … is not
+supported yet"* on Svelte-generated chunks (reproduced on 0.28.1 and 0.27.7).
+`esbuild` is therefore **pinned to the known-good `0.27.3`**. Risk is negligible
+for us because:
+- esbuild is a **build/dev tool**, not shipped at runtime — the production image
+  runs `pnpm prune` (and a dedicated runner stage), so `esbuild`, `vite`,
+  `vitest`, `jsdom`, `eslint` etc. are **not present in the deployed container**;
+- both advisories require an attacker-controlled build/dev environment
+  (malicious `NPM_CONFIG_REG` / Windows dev-server file read), which does not
+  exist in our CI/build flow.
+
+Re-check after each upstream bump: if esbuild ≥0.28.x later transpiles Svelte
+output cleanly, raise the pin and re-run the audit.
+
+### Backend (Python / Poetry)
+Audited with `pip-audit`. Patched via `poetry update <pkg> --lock` (no
+`pyproject.toml` change needed — the existing constraints already allow the fix):
+
+| Package | Was | Now | Why |
+|---|---|---|---|
+| `django` | 6.0.5 | 6.0.6 | 5 advisories: signed-cookie salt, cache `Vary`/`Cache-Control` leaks, STARTTLS reuse |
+| `pyjwt` | 2.12.1 | 2.13.0 | algorithm-confusion (JWK as HMAC secret), JWKS SSRF/DoS, detached-JWS amplification |
+
+**Deferred: `torch` (CVE-2025-3000) and `transformers` (RCE in checkpoint /
+Trainer load).** Both require **major** upgrades (transformers → 5.x) and are not
+in our attack surface — we never load untrusted model checkpoints, and the
+`torch.jit.script` path is a local-only vector. Revisit when upstream
+(`sentence-transformers`) moves to a compatible major.
+
+### How to re-audit
+```bash
+# Frontend (run from repo root)
+docker run --rm -v "$(pwd)/frontend":/app -w /app node:24-slim sh -lc \
+  "corepack enable >/dev/null; corepack prepare pnpm@10.33.2 --activate >/dev/null; pnpm audit"
+
+# Backend (against the built image's actual installed versions)
+docker exec backend poetry run pip freeze > /tmp/be.txt
+docker run --rm -v /tmp/be.txt:/r.txt python:3.12-slim sh -lc \
+  "pip install -q pip-audit && pip-audit -r /r.txt --no-deps"
+```
+After changing pins, regenerate the lockfile (`pnpm install --lockfile-only` or
+`poetry update <pkg> --lock`), **rebuild and redeploy**, then re-audit.
