@@ -91,7 +91,32 @@ const LITERAL_REPLACEMENTS = [
 		'src/routes/+layout.svelte',
 		[['<link rel="icon" href="/favicon.ico" />', '<link rel="icon" type="image/svg+xml" href="/favicon.svg" />']]
 	],
-	['src/lib/components/Logo/Logo.svelte', [['Ciso-assistant icon', 'Netlink Aegis icon']]]
+	['src/lib/components/Logo/Logo.svelte', [['Ciso-assistant icon', 'Netlink Aegis icon']]],
+	// Sidebar polish (airy minimalist): a clean white panel with a hairline
+	// border instead of the heavy gray+shadow. Mid-line substrings only, so the
+	// match is whitespace-safe and a no-op if upstream changes these classes.
+	[
+		'src/lib/components/SideBar/SideBar.svelte',
+		[
+			['flex w-64 shadow transition-all', 'flex w-64 border-r border-slate-200 transition-all'],
+			['overflow-x-hidden bg-gray-50 py-4 px-3', 'overflow-x-hidden bg-white py-5 px-3']
+		]
+	],
+	// Stronger active-item highlight: blue pill + left accent bar (transparent on
+	// idle so text alignment doesn't shift between states).
+	[
+		'src/lib/components/SideBar/SideBarItem.svelte',
+		[
+			[
+				"'bg-primary-100 text-primary-800'",
+				"'bg-primary-50 text-primary-700 font-medium border-l-2 border-primary-600'"
+			],
+			[
+				"'hover:bg-primary-50 text-gray-800 '",
+				"'hover:bg-slate-100 text-slate-700 border-l-2 border-transparent '"
+			]
+		]
+	]
 ];
 
 function patchSourceFiles() {

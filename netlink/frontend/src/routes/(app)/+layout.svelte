@@ -1,0 +1,224 @@
+<script lang="ts">
+	import { run } from 'svelte/legacy';
+
+	// Most of your app wide CSS should be put in this file
+	import '../../app.css';
+
+	import { AppBar } from '@skeletonlabs/skeleton-svelte';
+	import { safeTranslate } from '$lib/utils/i18n';
+
+	import SideBar from '$lib/components/SideBar/SideBar.svelte';
+	import Breadcrumbs from '$lib/components/Breadcrumbs/Breadcrumbs.svelte';
+	import {
+		pageTitle,
+		modelName,
+		modelDescription,
+		clientSideToast,
+		getStartedTrigger
+	} from '$lib/utils/stores';
+	import { getCookie, deleteCookie } from '$lib/utils/cookies';
+	import { browser } from '$app/environment';
+	import { page } from '$app/stores';
+	import { m } from '$paraglide/messages';
+
+	import type { PageData, ActionData } from './$types';
+	import { getSidebarVisibleItems } from '$lib/utils/sidebar-config';
+	import { getModalStore, type ModalStore } from '$lib/components/Modals/stores';
+
+	import CommandPalette from '$lib/components/CommandPalette/CommandPalette.svelte';
+	import ChatWidget from '$lib/components/ChatWidget/ChatWidget.svelte';
+	import {
+		interceptExternalLinks,
+		setGlobalModalStore,
+		setShowWarningExternalLinks
+	} from '$lib/utils/external-links';
+
+	const isMac = browser && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+	const modifierKey = isMac ? '⌘' : 'Ctrl';
+
+	let commandPalette: ReturnType<typeof CommandPalette> | undefined = $state();
+
+	let sidebarOpen = $state(true);
+
+	let classesSidebarOpen = $derived((open: boolean) => (open ? 'ml-64' : 'ml-7'));
+
+	interface Props {
+		data: PageData;
+		form: ActionData;
+		sideBarVisibleItems?: any;
+		children?: import('svelte').Snippet;
+	}
+
+	let {
+		data,
+		form,
+		sideBarVisibleItems = getSidebarVisibleItems(data?.featureflags),
+		children
+	}: Props = $props();
+
+	const modalStore: ModalStore = getModalStore();
+
+	// Display title, model name, and description from either page data or manual store setting
+	const displayTitle = $derived($page.data?.title || $pageTitle);
+
+	// Auto-detect model from URL for list pages
+	// Match pattern: /model-name or /model-name/ (but not /model-name/uuid or /model-name/something)
+	const urlModel = $derived(() => {
+		const path = $page.url.pathname;
+		const match = path.match(/^\/([a-z-]+)\/?$/);
+		return match ? match[1] : null;
+	});
+
+	// Generate description key from URL model: "risk-matrices" → "riskMatricesDescription"
+	const urlDescriptionKey = $derived(() => {
+		const model = urlModel();
+		if (!model) return null;
+
+		const camelCase = model
+			.split('-')
+			.map((word, index) => (index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1)))
+			.join('');
+		return `${camelCase}Description`;
+	});
+
+	// Determine if we're on a list page vs detail page
+	// List page: URL matches /model-name pattern (e.g., /risk-assessments)
+	// Detail page: has an object title from loadDetail (e.g., /risk-assessments/uuid)
+	const matchesListUrl = $derived(!!urlModel());
+	const hasObjectTitle = $derived(!!$page.data?.title);
+
+	// For list pages: show description subtitle
+	// For detail pages: show model name subtitle
+	const displayModelName = $derived(
+		hasObjectTitle ? $page.data?.modelVerboseName || $modelName : ''
+	);
+
+	const displayModelDescription = $derived(
+		(() => {
+			// Only show description on list pages (not on detail pages with object titles)
+			// Exception: pages that explicitly provide a modelDescriptionKey
+			if (hasObjectTitle && !$page.data?.modelDescriptionKey) return '';
+			if (!matchesListUrl && !$page.data?.modelDescriptionKey) return '';
+
+			// List pages: get description from i18n
+			const descKey = $page.data?.modelDescriptionKey || urlDescriptionKey();
+			if (descKey && m[descKey]) {
+				return m[descKey]();
+			}
+
+			// Fallback to manual store
+			return $modelDescription;
+		})()
+	);
+
+	// Initialize external link interceptor
+	$effect(() => {
+		if (browser) {
+			setGlobalModalStore(modalStore);
+			// Set the warning preference from settings (default to true if not set)
+			const showWarning = data?.settings?.show_warning_external_links ?? true;
+			setShowWarningExternalLinks(showWarning);
+			interceptExternalLinks();
+		}
+	});
+
+	// Handle login-specific logic
+	run(() => {
+		if (browser) {
+			const fromLogin = getCookie('from_login');
+			if (fromLogin === 'true') {
+				deleteCookie('from_login');
+				fetch('/fe-api/waiting-risk-acceptances').then(async (res) => {
+					const data = await res.json();
+					const number = data.count ?? 0;
+					if (number <= 0) return;
+				});
+			}
+		}
+	});
+
+	// $inspect(data);
+</script>
+
+<svelte:head>
+	<title>CISO Assistant | {safeTranslate(displayTitle)}</title>
+</svelte:head>
+
+<!-- App Shell -->
+<div class="overflow-x-clip">
+	<SideBar bind:open={sidebarOpen} {sideBarVisibleItems} />
+	<AppBar
+		class="sticky top-0 z-50 border-b border-slate-200 transition-all duration-300 bg-white/95 backdrop-blur-sm w-auto {classesSidebarOpen(
+			sidebarOpen
+		)}"
+	>
+		<!-- Breadcrumb on top (minimal hierarchy) -->
+		<div class="px-6 pt-2.5">
+			<Breadcrumbs />
+		</div>
+		<!-- Page title + actions -->
+		<div class="flex items-end justify-between gap-4 px-6 pb-3 pt-1">
+			<div class="min-w-0">
+				<h1
+					class="text-[1.7rem] leading-tight font-semibold tracking-tight text-slate-900 truncate"
+					id="page-title"
+				>
+					{safeTranslate(displayTitle)}
+				</h1>
+				{#if displayModelName}
+					<div class="text-sm text-slate-500 font-medium">
+						{safeTranslate(displayModelName)}
+					</div>
+				{/if}
+				{#if displayModelDescription}
+					<div class="text-xs text-slate-400 mt-0.5">
+						{safeTranslate(displayModelDescription)}
+					</div>
+				{/if}
+			</div>
+			<div class="flex items-center gap-2 shrink-0">
+				{#if !data?.user?.is_third_party}
+					<button
+						onclick={() => commandPalette?.toggle()}
+						class="flex items-center gap-2 shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5
+				text-xs text-slate-500 hover:bg-slate-100 hover:border-slate-300 hover:text-slate-700
+				transition-all duration-150 cursor-pointer"
+					>
+						<i class="fa-solid fa-magnifying-glass text-slate-400"></i>
+						<span class="hidden sm:inline">{m.searchEllipsis()}</span>
+						<kbd
+							class="hidden sm:inline-flex items-center rounded border border-slate-200 bg-white px-1.5 py-0.5
+					font-mono text-[10px] text-slate-400">{modifierKey}K</kbd
+						>
+					</button>
+				{/if}
+				{#if data?.user?.is_admin}
+					<button
+						onclick={() => getStartedTrigger.set(true)}
+						class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary-600 text-white
+			text-xs font-semibold shadow-sm hover:bg-primary-700 transition-colors duration-150
+			focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 cursor-pointer"
+					>
+						<i class="fa-solid fa-rocket"></i>
+						{m.getStarted()}
+					</button>
+				{/if}
+			</div>
+		</div>
+	</AppBar>
+	<!-- Router Slot -->
+	{#if !data?.user?.is_third_party}
+		<CommandPalette bind:this={commandPalette} />
+	{/if}
+	{#if $page.data.featureflags?.chat_mode}
+		<ChatWidget />
+	{/if}
+	<main
+		class="min-h-screen p-6 sm:p-8 bg-slate-50 transition-all duration-300 {classesSidebarOpen(
+			sidebarOpen
+		)}"
+	>
+		{@render children?.()}
+	</main>
+	<!-- ---- / ---- -->
+</div>

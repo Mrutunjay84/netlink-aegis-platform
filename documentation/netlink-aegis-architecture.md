@@ -159,6 +159,20 @@ The overlay app has **no migrations**; all config is stored in the existing
   and rebuild the frontend. (Contrast/text-on-color tokens auto-follow because
   ciso-theme maps them to each color's 50/950 shade, which we set.)
 
+**App shell redesign (layout/placement):** upstream hardcodes violet/pink in the
+shell (outside the token system), so we restyle the shell too:
+- `netlink/frontend/src/routes/(app)/+layout.svelte` (overlay) — minimalist,
+  airy header: **breadcrumb on top**, a large clean solid page title (no
+  gradient), a refined search pill and a minimal primary "Get Started" button,
+  and a **flat `slate-50` content background** (replacing the violet→slate
+  gradient). It keeps all upstream logic; only the markup/classes changed. (As a
+  full overlay it won't auto-pick upstream layout changes — re-apply on big
+  upstream layout updates.)
+- Sidebar polish via `brand-patch.mjs` literal patches — a clean white panel with
+  a hairline right border (was gray + heavy shadow) and a stronger active-item
+  highlight (blue pill + left accent bar). Whitespace-safe, no-op if upstream
+  renames the classes.
+
 ---
 
 ## 5. AI provider configuration (runtime)
