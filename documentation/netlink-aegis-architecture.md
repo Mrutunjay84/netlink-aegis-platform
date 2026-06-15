@@ -146,8 +146,10 @@ The overlay app has **no migrations**; all config is stored in the existing
   shape tokens — themes the **whole app** (sidebar, top bar, buttons, cards,
   inputs, badges, tables, charts, our pages) purely through Skeleton design
   tokens, so there are **no per-component overrides** and it stays merge-safe.
-- Palette (overrides the upstream ramps after `ciso-theme.css`, so it wins):
-  - `primary` = **Indigo**, `secondary` = **Cyan**, `tertiary` = **Violet**
+- Palette (overrides the upstream ramps after `ciso-theme.css`, via
+  `html[data-theme='cisotheme']` so it always wins):
+  - `primary` = **Blue** (deliberately distinct from upstream's violet),
+    `secondary` = **Teal**, `tertiary` = **Violet**
   - `success` = **Emerald**, `warning` = **Amber**, `error` = **Rose**
   - `surface` = refined **Slate** (cool, clean neutrals)
 - Typography/shape: Inter variable, heading weight 650, slight negative
