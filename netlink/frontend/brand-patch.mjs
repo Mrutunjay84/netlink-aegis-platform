@@ -116,6 +116,13 @@ const LITERAL_REPLACEMENTS = [
 				"'hover:bg-slate-100 text-slate-700 border-l-2 border-transparent '"
 			]
 		]
+	],
+	// Section headers read like a different typeface because of the cramped
+	// negative letter-spacing on all-caps text. Relax it to a clean, airy
+	// uppercase tracking so the sidebar matches the rest of the Inter UI.
+	[
+		'src/lib/components/SideBar/SideBarCategory.svelte',
+		[['uppercase tracking-tighter', 'uppercase tracking-wider']]
 	]
 ];
 
