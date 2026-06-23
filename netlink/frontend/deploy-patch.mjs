@@ -34,6 +34,13 @@ const ROUTES_DIR = join(ROOT, 'src');
 const FROM = /secure:\s*true/g;
 const TO = "secure: process.env.SECURE_COOKIES !== 'false'";
 
+// `cookies.delete(...)` calls don't pass an explicit `secure` flag, so SvelteKit
+// defaults it to `true` for any non-localhost host. Over plain HTTP the browser
+// then ignores the deletion Set-Cookie (Secure cookies require HTTPS), so the
+// auth cookies are never cleared and LOGOUT silently fails. Inject the same
+// env-driven secure flag into every `cookies.delete(name, { ... })` call.
+const DELETE_FROM = /(cookies\.delete\(\s*['"][^'"]+['"]\s*,\s*\{)([\s\S]*?)(\}\s*\))/g;
+
 function collectServerFiles(dir, acc) {
 	if (!existsSync(dir)) return acc;
 	for (const entry of readdirSync(dir)) {
@@ -41,7 +48,14 @@ function collectServerFiles(dir, acc) {
 		const st = statSync(full);
 		if (st.isDirectory()) {
 			collectServerFiles(full, acc);
-		} else if (entry.endsWith('.server.ts') || entry.endsWith('.server.js')) {
+		} else if (
+			// `*.server.ts` (hooks, +page.server.ts, +layout.server.ts) AND
+			// `+server.ts` route endpoints. The latter set auth cookies and handle
+			// LOGOUT (logout/+server.ts) but do NOT end in `.server.ts` (the `+`
+			// replaces the dot), so they were previously missed — leaving logout's
+			// cookie deletes Secure-by-default and broken over plain HTTP.
+			/(?:\.server|\+server)\.(?:ts|js)$/.test(entry)
+		) {
 			acc.push(full);
 		}
 	}
@@ -57,9 +71,22 @@ function patchCookies() {
 	let changed = 0;
 	for (const path of files) {
 		const original = readFileSync(path, 'utf8');
-		if (!FROM.test(original)) continue;
+		let patched = original;
+
+		// 1) `secure: true` on cookies.set(...) -> env-driven.
 		FROM.lastIndex = 0;
-		const patched = original.replace(FROM, TO);
+		patched = patched.replace(FROM, TO);
+
+		// 2) cookies.delete(name, { ... }) -> ensure an env-driven secure flag,
+		//    so logout actually clears cookies over plain HTTP.
+		DELETE_FROM.lastIndex = 0;
+		patched = patched.replace(DELETE_FROM, (full, head, body, tail) => {
+			if (/secure\s*:/.test(body)) return full; // already explicit
+			const trimmed = body.replace(/\s+$/, '');
+			const sep = trimmed.trimEnd().endsWith(',') || trimmed.trim() === '' ? '' : ',';
+			return `${head}${trimmed}${sep} ${TO} ${tail}`;
+		});
+
 		if (patched !== original) {
 			writeFileSync(path, patched);
 			changed++;

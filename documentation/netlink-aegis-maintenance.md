@@ -224,6 +224,7 @@ survive restarts and updates; back them up via the DB backup above.
 | UI looks unchanged after a rebuild | browser cached old assets | hard refresh (Ctrl/Cmd+Shift+R) or incognito; verify with `curl` from §1 |
 | `DisallowedHost` in backend logs | accessing via a host not allowed | add it to `ALLOWED_HOSTS`/`CISO_FQDN` in the compose/env, `dc up -d backend huey` |
 | Login silently fails over HTTP | `Secure` cookies dropped on plain HTTP | already handled (`SECURE_COOKIES=false`); use a fresh login / incognito |
+| Logout doesn't sign you out | Secure cookie not cleared over HTTP | fixed in `deploy-patch.mjs` (env-driven secure on cookie deletes incl. `+server.ts`); rebuild frontend |
 | Frontend build killed (exit 137) | out of memory | lower `NODE_BUILD_HEAP_MB` in `.env.http`, or add swap (below), or stop idle apps during build |
 | AI returns nothing / 502 | provider quota/outage | retry, switch model/provider, or add another key in **AI providers** |
 | `sqlite ... unable to open database file` | `./db` not writable by container user | `docker run --rm -v "$(pwd)/db:/db" alpine sh -c "chown -R 1001:1001 /db"` |

@@ -57,7 +57,7 @@ Two guiding rules:
 │       ├── Dockerfile            # builds branded frontend image (overlay + patches)
 │       ├── Makefile              # local-dev overlay/build helpers
 │       ├── brand-patch.mjs       # white-label i18n/literals + inject theme
-│       ├── deploy-patch.mjs      # make auth cookie Secure flag env-driven (HTTP/HTTPS)
+│       ├── deploy-patch.mjs      # env-driven Secure flag on cookie set+delete (HTTP/HTTPS); scans +server.ts too
 │       ├── feature-patch.mjs     # add sidebar nav entries + i18n keys for our pages
 │       └── src/
 │           ├── netlink-theme.css # minimalistic UI theme overlay (fonts/tokens)
@@ -85,7 +85,10 @@ Two guiding rules:
      **injects `@import './netlink-theme.css';` into `app.css`** so our theme
      loads after the upstream theme and wins.
    - `deploy-patch.mjs` — rewrites cookie writes so the **`Secure` flag is driven
-     by `SECURE_COOKIES`** (lets login work over plain HTTP). Scans all of `src`.
+     by `SECURE_COOKIES`** (lets login work over plain HTTP). Also injects the same
+     env-driven `secure` flag into `cookies.delete(...)` calls so **logout** clears
+     cookies over HTTP. Scans all of `src`, including `+server.ts`/`+server.js`
+     route endpoints (e.g. the logout endpoint), not just `*.server.ts`.
    - `feature-patch.mjs` — inserts the **Policy Builder** and **Audit Evidence**
      sidebar nav items and their i18n keys.
 4. `pnpm install --frozen-lockfile`, then `pnpm add` our extra deps (TipTap
@@ -261,6 +264,7 @@ on `[data-theme='cisotheme']`). Rebuild frontend.
 |---|---|---|
 | `DisallowedHost: ...` in backend logs | accessing via a host not in `ALLOWED_HOSTS` (e.g. a new domain) | add the host to `ALLOWED_HOSTS`/`CISO_FQDN`, recreate backend |
 | Login silently fails over HTTP | `Secure` cookies dropped on plain HTTP | `SECURE_COOKIES=false` (already wired by `deploy-patch.mjs`); use a fresh/incognito login |
+| Logout doesn't log you out (stays signed in) | `cookies.delete` defaults `secure:true`; over plain HTTP the browser drops the deletion cookie. `+server.ts` route endpoints were also not scanned by the deploy patch | `deploy-patch.mjs` now injects env-driven `secure` into `cookies.delete(...)` and scans `+server.ts`/`+server.js` too |
 | Download/Save buttons dead, page not interactive | client-side hydration crash (e.g. wrapping a TipTap `Editor` in `$state`) | use `$state.raw` for editor; keep mount in try/catch (already done) |
 | AI returns nothing / 502 | provider quota/outage (e.g. Gemini free tier 429/503) | retry, switch model/provider, or add a paid/other key; UI now shows the reason |
 | Frontend build killed (exit 137) | OOM | lower `NODE_BUILD_HEAP_MB` or add swap; stop idle containers during build |
