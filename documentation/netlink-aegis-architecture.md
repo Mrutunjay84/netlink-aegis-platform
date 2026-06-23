@@ -172,9 +172,12 @@ shell (outside the token system), so we restyle the shell too:
   full overlay it won't auto-pick upstream layout changes — re-apply on big
   upstream layout updates.)
 - Sidebar polish via `brand-patch.mjs` literal patches — a clean white panel with
-  a hairline right border (was gray + heavy shadow) and a stronger active-item
-  highlight (blue pill + left accent bar). Whitespace-safe, no-op if upstream
-  renames the classes.
+  a hairline right border (was gray + heavy shadow), a stronger active-item
+  highlight (blue pill + left accent bar), and **section headers relaxed from
+  `tracking-tighter` → `tracking-wider`** so the all-caps nav labels read as the
+  same Inter typeface as the rest of the UI (cramped negative letter-spacing made
+  them look like a different font). Whitespace-safe, no-op if upstream renames the
+  classes.
 
 ---
 
